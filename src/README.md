@@ -2,8 +2,8 @@
 _注1：如果安装的是`bazelisk`，则下面`bazel`应当替换成`bazelisk`_
 _注2：`--jobs=4`在服务器上不加也可以，但如果编译过程中卡死并且见到10个并行任务，则必须加_
 ```bash
-bazel build //examples/dpf_demo:dpf_demo --jobs=4
-bazel run //examples/dpf_demo:dpf_demo --jobs=4
+bazel build //src:my_dpf_demo --jobs=4
+bazel run //src:my_dpf_demo --jobs=4
 ```
 
 ## 执行输出
