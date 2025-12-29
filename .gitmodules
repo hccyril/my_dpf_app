@@ -1,3 +1,4 @@
 [submodule "third_party/google_DPF"]
 	path = third_party/google_DPF
 	url = https://github.com/hccyril/google_DPF.git
+	branch = mainsync

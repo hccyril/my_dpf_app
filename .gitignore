@@ -416,3 +416,12 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Bazel generated symlinks
+bazel-*
+
+# backup files
+*.bak
+
+# pdf files
+*.pdf

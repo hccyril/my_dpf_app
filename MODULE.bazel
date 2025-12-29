@@ -1,0 +1,21 @@
+###############################################################################
+# Bazel now uses Bzlmod by default to manage external dependencies.
+# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
+#
+# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
+###############################################################################
+
+module(
+    name = "my_dpf_app",
+    version = "0.1.0",
+)
+
+# 1. 这里的 name 必须和子仓库 MODULE.bazel 里的 module(name=...) 完全一致：
+#    即 "distributed_point_functions"
+bazel_dep(name = "distributed_point_functions", version = "0.0.0")
+
+# 2. local_path_override 的 module_name 同样必须是这个名字
+local_path_override(
+    module_name = "distributed_point_functions",
+    path = "third_party/google_DPF",
+)
