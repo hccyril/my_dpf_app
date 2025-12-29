@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
   constexpr int64_t kDomainSize = 1 << kLogDomainSize;
   constexpr int64_t kAlpha = 3;
   constexpr int64_t kBeta = 42;
-  constexpr int kValueBits = 32;  // 聚合值位数
+  constexpr int kValueBits = 32;  // 聚合值位数（模 2^32 环）
 
   // 1. 构造一维 DPF 的参数
   DpfParameters parameters;
@@ -41,13 +41,11 @@ int main(int argc, char** argv) {
   std::unique_ptr<DistributedPointFunction> dpf = std::move(dpf_or.value());
 
   // 3. 生成两把密钥 key0 / key1
-  //   新版 API 通常提供 GenerateKeysIncremental(alpha, betas)
-  //   也可以使用 GenerateKeys(alpha, value) 这种简单形式。
   absl::uint128 alpha = absl::uint128(kAlpha);
   absl::uint128 beta = absl::uint128(kBeta);
 
   absl::StatusOr<std::pair<DpfKey, DpfKey>> keys_or =
-      dpf->GenerateKeys(alpha, beta);  // 使用简单版接口
+      dpf->GenerateKeys(alpha, beta);  // 简单版接口：一维 DPF，值在模 2^32 环上
   if (!keys_or.ok()) {
     std::cerr << "Failed to generate DPF keys: " << keys_or.status()
               << std::endl;
@@ -76,11 +74,7 @@ int main(int argc, char** argv) {
   EvaluationContext ctx0 = std::move(ctx0_or.value());
   EvaluationContext ctx1 = std::move(ctx1_or.value());
 
-  // 5. 在整个定义域 [0, kDomainSize) 上评估 share 并相加
-  //    新版接口通常提供 EvaluateAt<T>(key, level, points) 或
-  //    EvaluateAt<T>(key, level, start, size) 这类形式。
-  //
-  // 这里我们用 EvaluateAt<T>(key, /*level=*/0, points) 的形式：
+  // 5. 在整个定义域 [0, kDomainSize) 上评估 share
   std::vector<absl::uint128> points;
   points.reserve(kDomainSize);
   for (int64_t x = 0; x < kDomainSize; ++x) {
@@ -108,15 +102,22 @@ int main(int argc, char** argv) {
   std::vector<T> shares0 = std::move(shares0_or.value());
   std::vector<T> shares1 = std::move(shares1_or.value());
 
-  std::cout << "Evaluation results (sum of shares):" << std::endl;
+  std::cout << "Evaluation results (sum of shares, modulo 2^" << kValueBits
+            << "):" << std::endl;
+
+  const uint64_t modulus = 1ULL << kValueBits;
+
   for (int64_t x = 0; x < kDomainSize; ++x) {
-    uint64_t sum = static_cast<uint64_t>(shares0[x]) +
-                   static_cast<uint64_t>(shares1[x]);
+    uint64_t v0 = static_cast<uint64_t>(shares0[x]);
+    uint64_t v1 = static_cast<uint64_t>(shares1[x]);
+    uint64_t sum_raw = v0 + v1;            // 64 位普通加法
+    uint64_t sum_mod = sum_raw % modulus;  // 在模 2^kValueBits 环上的和
 
     std::cout << "x = " << x
-              << "  share0 = " << static_cast<uint64_t>(shares0[x])
-              << "  share1 = " << static_cast<uint64_t>(shares1[x])
-              << "  sum = " << sum;
+              << "  share0 = " << v0
+              << "  share1 = " << v1
+              << "  sum_raw = " << sum_raw
+              << "  sum_mod = " << sum_mod;
 
     if (x == kAlpha) {
       std::cout << "  <-- expected beta = " << kBeta;
